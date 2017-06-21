@@ -14,6 +14,9 @@
   "license": "ISC",
   "dependencies": {
     "firebase": "^3.9.0",
+    "level-js": "^2.2.4",
+    "linvodb3": "^3.25.0",
+    "nedb": "^1.8.0",
     "photon": "github:connors/photon",
     "react": "^15.5.4",
     "react-dom": "^15.5.4",
