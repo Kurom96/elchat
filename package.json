@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "async": "^2.4.1",
     "firebase": "^3.9.0",
     "level-js": "^2.2.4",
     "linvodb3": "^3.25.0",
