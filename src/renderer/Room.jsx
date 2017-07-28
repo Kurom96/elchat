@@ -105,7 +105,7 @@ export default class Room extends React.Component {
 
         // 1件保存
         console.time("save:one");
-        let onedata = Object.assign({}, dummydataX[0]);
+        let onedata = Object.assign({}, dummydata[0]);
         delete onedata._id;
         const dummymodel = new db(onedata);
         dummymodel.save((err) => {
