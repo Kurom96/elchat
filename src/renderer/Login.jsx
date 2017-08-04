@@ -21,7 +21,7 @@ export default class Login extends React.Component {
 		super(props);
 		this.state = {
 			email: localStorage.userEmail || "",
-			password: localStorage.userPassword || "",
+			password: localStorage.password || "",
 			errors: []
 		};
 		this.handleOnChangeEmail = this.handleOnChangeEmail.bind(this);
