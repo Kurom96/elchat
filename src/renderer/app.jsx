@@ -18,12 +18,13 @@ const appRouting = (
 			<Route path="rooms" component={Rooms}>
 				<Route path=":roomId" component={Room}></Route>
 			</Route>
+			<Route path="room" component={Room}></Route>
 		</Route>
 	</Router>
 );
 
 if (!location.hash.length) {
-	location.hash = "#/login";
+	location.hash = "#/room";
 }
 
 firebase.initializeApp(firebaseConfig);

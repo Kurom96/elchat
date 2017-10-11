@@ -42,16 +42,26 @@ export default class Room extends React.Component {
 			messages: [],
             dbIdStart: "0",
             dbCount: "10",
-            dbDatalimit: "1000"
+            dbDatalimit: "1000",
+            dbQuery: `{"batting": "L"}`,
+            dbLimit: "1000",
+            dbName: "dummy1000_0"
 		};
-		// this.db = firebase.database();
-        // this.handleMessagePost = this.handleMessagePost.bind(this);
+        // ボタン
         this.handleOnCreate = this.handleOnCreate.bind(this);
         this.handleOnPost = this.handleOnPost.bind(this);
+        this.handleOnFind = this.handleOnFind.bind(this);
+
+        // Change
         this.handleOnChangeStart = this.handleOnChangeStart.bind(this);
         this.handleOnChangeCount = this.handleOnChangeCount.bind(this);
         this.handleOnChangeDatalimit = this.handleOnChangeDatalimit.bind(this);
-	}
+        this.handleOnChangeQuery = this.handleOnChangeQuery.bind(this);
+        this.handleOnChangeLimit = this.handleOnChangeLimit.bind(this);
+        this.handleOnChangeName = this.handleOnChangeName.bind(this);
+
+        this.dbs = {};
+    }
 
 	handleOnChangeDatalimit(e) {
 	    this.setState({
@@ -71,13 +81,32 @@ export default class Room extends React.Component {
         });
     }
 
+    handleOnChangeQuery(e) {
+	    this.setState({
+            dbQuery: e.target.value
+        });
+    }
+
+    handleOnChangeLimit(e) {
+	    this.setState({
+            dbLimit: e.target.value
+        });
+    }
+
+    handleOnChangeName(e) {
+	    this.setState({
+            dbName: e.target.value
+        });
+    }
+
     /**
-     * ダミーデータをしてされた件数にする
+     * ダミーデータを指定された件数にする
      * @param datacount
      */
     multiplyDummyData(datacount) {
-        const dummydata1000 = dummydata.slice(0, 1000);
-        const times = Math.ceil(datacount / 1000);
+        const recordCount = 911;
+        const dummydata1000 = dummydata.slice(0, recordCount);
+        const times = Math.ceil(datacount / recordCount);
 
         dummydataX = [];
 
@@ -96,12 +125,16 @@ export default class Room extends React.Component {
     }
 
     handleOnPost() {
-        const db = new LinvoDB(`dummy1000_0`, {
-            "batting": { type: String, index: true },
-            "pitching": { type: String, index: true },
-            "player_code": { type: String, index: true },
-            "simple_player_code": { type: String, index: true }
-        }, {});
+        const dbName = `dummy1000_0`;
+        if (!this.dbs[dbName]) {
+            this.dbs[dbName] = new LinvoDB(`dummy1000_0`, {
+                "batting": { type: String, index: true },
+                "pitching": { type: String, index: true },
+                "player_code": { type: String, index: true },
+                "simple_player_code": { type: String, index: true }
+            }, {});
+        }
+        const db = this.dbs[dbName];
 
         // 1件保存
         console.time("save:one");
@@ -142,16 +175,43 @@ export default class Room extends React.Component {
             }
             console.log("done!!");
         });
-        // this.initializeLinvoDb(() => {
-        //    this.fetchRoom(roomId);
-        // });
-        // this.initializeNeDb(() => {
-        // 	this.fetchRoom(roomId);
-        // });
+    }
+
+    handleOnFind() {
+        const dbName = this.state.dbName || "dummy1000_0";
+        if (!this.dbs[dbName]) {
+            const index = {
+                "batting": { type: String, index: true },
+                "pitching": { type: String, index: true },
+                "player_code": { type: String, index: true },
+                "simple_player_code": { type: String, index: true }
+            };
+            this.dbs[dbName] = new LinvoDB(dbName, index, {});
+        }
+        const db = this.dbs[dbName];
+
+        let query;
+        try {
+            query = JSON.parse(this.state.dbQuery);
+        } catch(e) {
+            console.error(e);
+            return;
+        }
+        const cursor = db.find(query);
+        const limit = Number(this.state.dbLimit || "1000");
+        cursor.limit(limit);
+        console.time("find");
+        cursor.exec((err, docs) => {
+            if (err) {
+                console.error(err);
+                return;
+            }
+            console.log(`${dbName} docs.length: ${docs.length}`);
+            console.timeEnd("find");
+        });
     }
 
 	componentDidMount() {
-		const { roomId } = this.props.params;
 	}
 
     /**
@@ -160,12 +220,17 @@ export default class Room extends React.Component {
      * @param cb
      */
     createLinvo(db_num, cb) {
-        const db = new LinvoDB(`dummy${this.state.dbDatalimit}_${db_num}`, {
-            "batting": { type: String, index: true },
-            "pitching": { type: String, index: true },
-            "player_code": { type: String, index: true },
-            "simple_player_code": { type: String, index: true }
-        }, {});
+        const dbName = `dummy${this.state.dbDatalimit}_${db_num}`;
+        if (!this.dbs[dbName]) {
+            this.dbs[dbName] = new LinvoDB(dbName, {
+                "batting": { type: String, index: true },
+                "pitching": { type: String, index: true },
+                "player_code": { type: String, index: true },
+                "simple_player_code": { type: String, index: true }
+            }, {});
+        }
+
+        const db = this.dbs[dbName];
 
         console.log(`LinvoDB初期データ作成：dummy${this.state.dbDatalimit}_${db_num}`);
         let dummymodels = dummydataX.map((val) => new db(val));
@@ -182,207 +247,6 @@ export default class Room extends React.Component {
             }
             console.log(`saveEnd: ${docs.length}`);
             cb(null, docs);
-        });
-    }
-
-    initializeLinvoDb(cb) {
-        console.time("load");
-        this.db = new LinvoDB(`dummy${DUMMY_LENGTH}`, {
-            "batting": { type: String, index: true },
-            "pitching": { type: String, index: true },
-            "player_code": { type: String, index: true },
-            "simple_player_code": { type: String, index: true }
-        }, {
-            // filename: "kkkkk"
-            // store: { db: leveljs }
-        });
-        console.timeEnd("load");
-
-        // console.time("count");
-        // this.db.find({}).count((err, count) => {
-        //     console.timeEnd("count");
-        //     if (count > 0) {
-        //         cb();
-        //         return;
-        //     }
-            console.log(`LinvoDB初期データ作成：`);
-
-            let tasks = [];
-            let dummymodels = dummydataX.map((val) => new this.db(val));
-
-            // 1件保存
-            // console.time("save");
-            // dummymodels[0].save((err) => {
-            //     console.timeEnd("save");
-            //     if (err) {
-            //         console.log(err);
-            //         return;
-            //     }
-            //     console.log("done");
-            // });
-
-            // async
-            // for (let model of dummymodels) {
-            //     tasks.push((callback) => {
-            //         model.save((err) => {
-            //             callback(err, model);
-            //         });
-            //     });
-            // }
-            // console.time("async");
-            // async.series(tasks, (err, results) => {
-            //     console.timeEnd("async");
-            //     if (err) {
-            //         console.log(`save error: ${err.message}`);
-            //         console.log(err);
-            //         return;
-            //     }
-            //     cb();
-            // });
-
-            // Promise
-            // console.time("promise");
-            // for (let model of dummymodels) {
-            //     tasks.push(new Promise((resolve, reject) => {
-            //         model.save((err) => {
-            //             if (err) {
-            //                 reject(err);
-            //                 return;
-            //             }
-            //             resolve();
-            //         });
-            //     }));
-            // }
-            // Promise.all(tasks)
-            //     .then(() => {
-            //         console.timeEnd("promise");
-            //         cb();
-            //     })
-            //     .catch((err) => {
-            //         console.timeEnd("promise");
-            //         console.log(`save error: ${err.message}`);
-            //         console.log(err);
-            //     });
-
-            // save
-            console.time("save");
-            this.db.save(dummymodels, (err, docs) => {
-                console.timeEnd("save");
-                if (err) {
-                    console.log(`Save Error ${err.message}`)
-                    console.log(err);
-                    return;
-                }
-                console.log(`saveEnd: ${docs.length}`);
-                cb();
-            });
-        // });
-    }
-
-	initializeNeDb(cb) {
-        console.time("load");
-        this.db = new neDB({ filename: "palyer.db" });
-        this.db.loadDatabase();
-        console.timeEnd("load");
-
-        console.time("count");
-        this.db.count({}, (err, count) => {
-            console.timeEnd("count");
-        	if (count > 0) {
-        		cb();
-        		return;
-			}
-            console.time("save:all");
-            this.db.insert(
-                dummydataX, (err, docs) => {
-                    console.timeEnd("save:all");
-                    console.log(docs.length);
-                    cb();
-                }
-            );
-        });
-    }
-
-	componentWillReceiveProps(nextProps) {
-		const { roomId } = nextProps.params;
-		if (roomId === this.props.params.roomId) {
-			return;
-		}
-		if (this.stream) {
-			// メッセージ監視を解除
-			this.stream.off();
-		}
-		this.setState({ messages: [] });
-		this.fetchRoom(roomId);
-	}
-
-	componentDidUpdate() {
-		setTimeout(() => {
-			// 画面下端へスクロール
-			this.room.parentNode.scrollTop = this.room.parentNode.scrollHeight;
-		}, 0);
-	}
-
-	componentWillUnmount() {
-		if( this.stream ) {
-			// メッセージ監視を解除
-			this.stream.off();
-		}
-	}
-
-	handleMessagePost(message) {
-		const newItemRef = this.fbChatRoomRef.child("messages").push();
-		this.user = this.user || firebase.auth().currentUser;
-		return newItemRef.update({
-			writtenBy: {
-				uid: this.user.uid,
-				displayName: this.user.displayName,
-				photoURL: this.user.photoURL
-			},
-			time: Date.now(),
-			text: message
-		});
-	}
-
-    createFindTask(query, limit) {
-        return (callback) => {
-            const key = JSON.stringify(query) + limit;
-            console.time(key);
-            const db = this.db.find(query);
-            if (limit) {
-                db.limit(limit);
-            }
-            db.exec((err, docs) => {
-                console.timeEnd(key);
-                callback(err);
-            });
-        };
-    }
-
-	fetchRoom(roomId) {
-		// FirebaseのDBからチャットルーム詳細データの参照を取得
-		// this.fbChatRoomRef = this.db.ref("/chatrooms/" + roomId);
-
-        let tasks = [
-            this.createFindTask({}, 1),
-            this.createFindTask({}, 100),
-            this.createFindTask({}, 200),
-            this.createFindTask({}, 300),
-            this.createFindTask({}, 400),
-            this.createFindTask({}, 500),
-            this.createFindTask({}, 600),
-            this.createFindTask({}, 700),
-            this.createFindTask({}, 800),
-            this.createFindTask({}, 900),
-            this.createFindTask({}, 1000)
-        ];
-
-        async.series(tasks, (err, results) => {
-            if (err) {
-                console.log(err);
-                return;
-            }
-            console.log("done!");
         });
     }
 
@@ -416,6 +280,29 @@ export default class Room extends React.Component {
                 />
                 <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnCreate}>create</button>
                 <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnPost}>post 1</button>
+                <div>&nbsp;</div>
+                <div>DB name</div>
+                <input
+                    type="text"
+                    className="form-control"
+                    value={this.state.dbName}
+                    onChange={this.handleOnChangeName}
+                />
+                <div>Query</div>
+                <input
+                    type="text"
+                    className="form-control"
+                    value={this.state.dbQuery}
+                    onChange={this.handleOnChangeQuery}
+                />
+                <div>Limit</div>
+                <input
+                    type="text"
+                    className="form-control"
+                    value={this.state.dbLimit}
+                    onChange={this.handleOnChangeLimit}
+                />
+                <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnFind}>Find</button>
 			</div>
 		);
 	}

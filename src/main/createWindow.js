@@ -10,4 +10,5 @@ export default function createWindow() {
 	win.on("close", () => {
 		win = null;
 	});
+    win.toggleDevTools();
 }
