@@ -2,21 +2,17 @@
 
 import React from "react";
 import Message from "./Message";
-import NewMessage from "./NewMessage";
-import firebase from "firebase/firebase-browser";
 
 import LinvoDB from "linvodb3";
-import neDB from "nedb";
-import dummydata from "./dummydata";
 import async from "async";
-import path from "path";
 
-LinvoDB.defaults.store = { db: require("level-js") };
-// LinvoDB.defaults.autoIndexing = false;
-// LinvoDB.dbPath = path.resolve(__dirname);
+import dummydata from "./dummydata";
+import dummyevent from "./dummyevent";
+
+LinvoDB.defaults.store = {db: require("level-js")};
 
 const ROOM_STYLE = {
-	padding: "10px 30px"
+    padding: "10px 30px"
 };
 
 const BUTTON_STYLE = {
@@ -26,27 +22,30 @@ const BUTTON_STYLE = {
 // ダミーデータ
 let dummydataX = [];
 
-// １件投入
-// dummydataX = dummydataX.slice(0, 1);
-// dummydataX[0]._id = "99999999";
-// dummydataX[0].player_code = "99999999";
-// dummydataX[0].player_name = "テスト太郎２";
+// const dbindex = {
+//     "batting": { type: String, index: true },
+//     "pitching": { type: String, index: true },
+//     "player_code": { type: String, index: true },
+//     "simple_player_code": { type: String, index: true }
+// };
 
-// console.log(`dummydataX count: ${dummydataX.length}`);
+const dbindex = {
+    index: {type: Number, index: true}
+};
 
 export default class Room extends React.Component {
-	constructor(props) {
-		super(props);
-		this.state = {
-			description: "",
-			messages: [],
+    constructor(props) {
+        super(props);
+        this.state = {
+            description: "",
+            messages: [],
             dbIdStart: "0",
             dbCount: "10",
             dbDatalimit: "1000",
-            dbQuery: `{"batting": "L"}`,
-            dbLimit: "1000",
-            dbName: "dummy1000_0"
-		};
+            dbQuery: `{"index": 33}`,
+            dbLimit: "10",
+            dbName: "dummy300"
+        };
         // ボタン
         this.handleOnCreate = this.handleOnCreate.bind(this);
         this.handleOnPost = this.handleOnPost.bind(this);
@@ -63,8 +62,8 @@ export default class Room extends React.Component {
         this.dbs = {};
     }
 
-	handleOnChangeDatalimit(e) {
-	    this.setState({
+    handleOnChangeDatalimit(e) {
+        this.setState({
             dbDatalimit: e.target.value
         })
     }
@@ -82,19 +81,19 @@ export default class Room extends React.Component {
     }
 
     handleOnChangeQuery(e) {
-	    this.setState({
+        this.setState({
             dbQuery: e.target.value
         });
     }
 
     handleOnChangeLimit(e) {
-	    this.setState({
+        this.setState({
             dbLimit: e.target.value
         });
     }
 
     handleOnChangeName(e) {
-	    this.setState({
+        this.setState({
             dbName: e.target.value
         });
     }
@@ -104,35 +103,36 @@ export default class Room extends React.Component {
      * @param datacount
      */
     multiplyDummyData(datacount) {
-        const recordCount = 911;
-        const dummydata1000 = dummydata.slice(0, recordCount);
-        const times = Math.ceil(datacount / recordCount);
-
         dummydataX = [];
-
-        let tmpdummy;
-        for (let i = 0; i < times; i++) {
-            tmpdummy = dummydata1000.map(val => Object.assign({}, val));
-            dummydataX = dummydataX.concat(tmpdummy);
+        for (let i = 0; i < datacount; i++) {
+            dummydataX.push(Object.assign({}, dummyevent, {_id: `${dummyevent._id}_${i}`, index: i}));
         }
-        // ID加工
-        dummydataX.map((val, idx) => {
-            val.player_code = val.player_code + idx;
-            val._id = val.player_code;
-            return val;
-        });
-        dummydataX = dummydataX.slice(0, datacount);
+
+        //
+        // const recordCount = 911;
+        // const dummydata1000 = dummydata.slice(0, recordCount);
+        // const times = Math.ceil(datacount / recordCount);
+        //
+        // dummydataX = [];
+        //
+        // let tmpdummy;
+        // for (let i = 0; i < times; i++) {
+        //     tmpdummy = dummydata1000.map(val => Object.assign({}, val));
+        //     dummydataX = dummydataX.concat(tmpdummy);
+        // }
+        // // ID加工
+        // dummydataX.map((val, idx) => {
+        //     val.player_code = val.player_code + idx;
+        //     val._id = val.player_code;
+        //     return val;
+        // });
+        // dummydataX = dummydataX.slice(0, datacount);
     }
 
     handleOnPost() {
         const dbName = `dummy1000_0`;
         if (!this.dbs[dbName]) {
-            this.dbs[dbName] = new LinvoDB(`dummy1000_0`, {
-                "batting": { type: String, index: true },
-                "pitching": { type: String, index: true },
-                "player_code": { type: String, index: true },
-                "simple_player_code": { type: String, index: true }
-            }, {});
+            this.dbs[dbName] = new LinvoDB(`dummy1000_0`, dbindex, {});
         }
         const db = this.dbs[dbName];
 
@@ -153,9 +153,9 @@ export default class Room extends React.Component {
     }
 
     handleOnCreate() {
-	    let dbIdStart = Number(this.state.dbIdStart);
-	    let dbCount = Number(this.state.dbCount);
-	    this.multiplyDummyData(Number(this.state.dbDatalimit));
+        let dbIdStart = Number(this.state.dbIdStart);
+        let dbCount = Number(this.state.dbCount);
+        this.multiplyDummyData(Number(this.state.dbDatalimit));
         const tasks = [];
         for (let i = dbIdStart; i < dbIdStart + dbCount; i++) {
             tasks.push((callback) => {
@@ -178,41 +178,92 @@ export default class Room extends React.Component {
     }
 
     handleOnFind() {
-        const dbName = this.state.dbName || "dummy1000_0";
-        if (!this.dbs[dbName]) {
-            const index = {
-                "batting": { type: String, index: true },
-                "pitching": { type: String, index: true },
-                "player_code": { type: String, index: true },
-                "simple_player_code": { type: String, index: true }
-            };
-            this.dbs[dbName] = new LinvoDB(dbName, index, {});
-        }
-        const db = this.dbs[dbName];
+        // const dbName = this.state.dbName || "dummy1000_0";
+        // if (!this.dbs[dbName]) {
+        //     this.dbs[dbName] = new LinvoDB(dbName, dbindex, {});
+        // }
+        // const db = this.dbs[dbName];
+        //
+        // let query;
+        // try {
+        //     query = JSON.parse(this.state.dbQuery);
+        // } catch(e) {
+        //     console.error(e);
+        //     return;
+        // }
+        // const cursor = db.find(query);
+        // const limit = Number(this.state.dbLimit || "1000");
+        // cursor.limit(limit);
+        // console.time("find");
+        // cursor.exec((err, docs) => {
+        //     if (err) {
+        //         console.error(err);
+        //         return;
+        //     }
+        //     console.log(`${dbName} docs.length: ${docs.length}`);
+        //     console.timeEnd("find");
+        // });
 
-        let query;
-        try {
-            query = JSON.parse(this.state.dbQuery);
-        } catch(e) {
-            console.error(e);
-            return;
+        const tasks = [];
+        for (let i = 0; i < this.state.dbCount; i++) {
+            tasks.push(this.createFindPromise(i));
         }
-        const cursor = db.find(query);
-        const limit = Number(this.state.dbLimit || "1000");
-        cursor.limit(limit);
-        console.time("find");
-        cursor.exec((err, docs) => {
-            if (err) {
-                console.error(err);
-                return;
-            }
-            console.log(`${dbName} docs.length: ${docs.length}`);
-            console.timeEnd("find");
+
+        console.log("FINDALLDB start");
+        console.time("FINDALLDB");
+        const result = tasks.reduce((pre, cur) => pre.then(cur.bind(this)), Promise.resolve());
+
+        result.then(() => {
+            console.timeEnd("FINDALLDB");
+        }).catch((err) => {
+            console.timeEnd("FINDALLDB");
+            console.log(err);
         });
     }
 
-	componentDidMount() {
-	}
+    createFindPromise(index) {
+        return () => {
+            return new Promise((resolve, reject) => {
+                const dbName = `${(this.state.dbName || "dummy")}_${index}`;
+                if (!this.dbs[dbName]) {
+                    this.dbs[dbName] = new LinvoDB(dbName, dbindex, {});
+                }
+                const db = this.dbs[dbName];
+
+                let query;
+                try {
+                    // query = JSON.parse(this.state.dbQuery);
+                    // query = { "index": index };
+                    // query = {$or: [{"index": 1}, {"index": 300}, {"index": 600}, {"index": 900}, {"index": 1200}, {"index": 1500}]};
+                    query = [];
+                    for (let i = 0; i < 30000; i += 300) {
+                        query.push({"index": i});
+                    }
+                    query = {$or: query};
+                } catch (e) {
+                    console.error(e);
+                    return;
+                }
+                const cursor = db.find(query);
+                const limit = Number(this.state.dbLimit || "1000");
+                cursor.limit(limit);
+                console.time(`find_${index}`);
+                cursor.exec((err, docs) => {
+                    if (err) {
+                        console.error(err);
+                        reject(err);
+                        return;
+                    }
+                    console.log(`${dbName} docs.length: ${docs.length}`);
+                    console.timeEnd(`find_${index}`);
+                    resolve(docs);
+                });
+            });
+        };
+    }
+
+    componentDidMount() {
+    }
 
     /**
      * DB量産用
@@ -222,12 +273,7 @@ export default class Room extends React.Component {
     createLinvo(db_num, cb) {
         const dbName = `dummy${this.state.dbDatalimit}_${db_num}`;
         if (!this.dbs[dbName]) {
-            this.dbs[dbName] = new LinvoDB(dbName, {
-                "batting": { type: String, index: true },
-                "pitching": { type: String, index: true },
-                "player_code": { type: String, index: true },
-                "simple_player_code": { type: String, index: true }
-            }, {});
+            this.dbs[dbName] = new LinvoDB(dbName, dbindex, {});
         }
 
         const db = this.dbs[dbName];
@@ -250,13 +296,13 @@ export default class Room extends React.Component {
         });
     }
 
-	render() {
-		const { messages } = this.state;
-		return (
-			<div style={ROOM_STYLE} ref={room => this.room = room}>
-				<div className="list-group">
-					{messages.map(m => <Message key={m.key} message={m} />)}
-				</div>
+    render() {
+        const {messages} = this.state;
+        return (
+            <div style={ROOM_STYLE} ref={room => this.room = room}>
+                <div className="list-group">
+                    {messages.map(m => <Message key={m.key} message={m}/>)}
+                </div>
                 <div>１DBのデータ件数</div>
                 <input
                     type="text"
@@ -278,8 +324,11 @@ export default class Room extends React.Component {
                     value={this.state.dbCount}
                     onChange={this.handleOnChangeCount}
                 />
-                <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnCreate}>create</button>
-                <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnPost}>post 1</button>
+                <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnCreate}>
+                    create
+                </button>
+                <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnPost}>post 1
+                </button>
                 <div>&nbsp;</div>
                 <div>DB name</div>
                 <input
@@ -302,8 +351,9 @@ export default class Room extends React.Component {
                     value={this.state.dbLimit}
                     onChange={this.handleOnChangeLimit}
                 />
-                <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnFind}>Find</button>
-			</div>
-		);
-	}
+                <button className="btn btn-large btn-primary" style={BUTTON_STYLE} onClick={this.handleOnFind}>Find
+                </button>
+            </div>
+        );
+    }
 }
